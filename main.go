@@ -77,8 +77,8 @@ func handleUsage(msg *tgbotapi.Message) {
 }
 
 func handleSearch(replyTo *tgbotapi.Message, targetID int) {
-	names := getNames(targetID)
-	c := tgbotapi.NewMessage(replyTo.Chat.ID, composeMessage(names))
+	msg := getNamesMessage(targetID)
+	c := tgbotapi.NewMessage(replyTo.Chat.ID, msg)
 	c.ReplyToMessageID = replyTo.MessageID
 	_, _ = bot.Send(c)
 }
@@ -94,39 +94,24 @@ func saveName(user *tgbotapi.User) {
 	})
 }
 
-func getNames(userID int) (records []Record) {
-	members := db.ZRevRangeByScoreWithScores(getUserKey(userID), redis.ZRangeBy{
+func getNamesMessage(userID int) (message string) {
+	records := db.ZRevRangeByScoreWithScores(getUserKey(userID), redis.ZRangeBy{
 		Min: "-inf",
 		Max: "+inf",
 	}).Val()
-	for _, member := range members {
-		records = append(records, Record{
-			LastSeen: time.Unix(int64(member.Score), 0),
-			Name: member.Member.(string),
-		})
-	}
-	return
-}
-
-func composeMessage(records []Record) (message string) {
 	if len(records) == 0 {
 		return "I haven't learned any names of this user :(\nTry adding me to the group where he/she talks frequently."
 	}
 	for i, record := range records {
 		lastSeen := "Last known"
 		if i != 0 {
-			lastSeen = "Until " + record.LastSeen.Format("02.01.2006")
+			lastSeen = "Until " + time.Unix(int64(record.Score), 0).Format("02.01.2006")
 		}
-		message += fmt.Sprintf("%s: %s\n", lastSeen, record.Name)
+		message += fmt.Sprintf("%s: %s\n", lastSeen, record.Member.(string))
 	}
 	return
 }
 
 func getUserKey(userID int) string {
 	return fmt.Sprintf("user.%d", userID)
-}
-
-type Record struct {
-	LastSeen time.Time
-	Name string
 }
