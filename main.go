@@ -46,6 +46,7 @@ func main() {
 			}
 			if msg.ForwardFrom != nil {
 				handleSearch(msg, msg.ForwardFrom.ID)
+				go saveName(msg.ForwardFrom)
 				continue
 			}
 			handleUsage(msg)
@@ -57,6 +58,7 @@ func main() {
 				continue
 			}
 			handleSearch(msg, msg.ReplyToMessage.From.ID)
+			go saveName(msg.ReplyToMessage.From)
 		}
 	}
 }
