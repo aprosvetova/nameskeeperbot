@@ -11,34 +11,41 @@ import (
 
 var db *redis.Client
 var bot *tgbotapi.BotAPI
+var cfg *Config
 
 func main() {
 	var err error
 
+	cfg, err = loadConfig("config.toml")
+	if err != nil {
+		log.Fatalln("can't read config", err)
+	}
+
 	db = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       6,
+		Addr:     cfg.Redis.Address,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.Database,
 	})
 
-	bot, err = tgbotapi.NewBotAPI("<TOKEN>")
+	bot, err = tgbotapi.NewBotAPI(cfg.General.Token)
 	if err != nil {
 		log.Fatalln("can't access Bot API: ", err)
 	}
 
+	if cfg.TdLib.Enabled {
+		go listenTdlib()
+	}
+
 	log.Printf("Started listening on @%s\n", bot.Self.UserName)
 
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates, err := bot.GetUpdatesChan(u)
+	updates, err := bot.GetUpdatesChan(tgbotapi.NewUpdate(0))
 
 	for update := range updates {
 		if update.Message == nil {
 			continue
 		}
 		msg := update.Message
-		go saveName(msg.From)
+		go saveNameWithBot(msg.From)
 		if msg.Chat.Type == "private" {
 			if msg.Command() == "start" {
 				handleStart(msg)
@@ -46,7 +53,7 @@ func main() {
 			}
 			if msg.ForwardFrom != nil {
 				handleSearch(msg, msg.ForwardFrom.ID)
-				go saveName(msg.ForwardFrom)
+				go saveNameWithBot(msg.ForwardFrom)
 				continue
 			}
 			handleUsage(msg)
@@ -58,7 +65,7 @@ func main() {
 				continue
 			}
 			handleSearch(msg, msg.ReplyToMessage.From.ID)
-			go saveName(msg.ReplyToMessage.From)
+			go saveNameWithBot(msg.ReplyToMessage.From)
 		}
 	}
 }
@@ -85,12 +92,16 @@ func handleSearch(replyTo *tgbotapi.Message, targetID int) {
 	_, _ = bot.Send(c)
 }
 
-func saveName(user *tgbotapi.User) {
-	currentName := strings.TrimSpace(user.FirstName + " " + user.LastName)
-	if user.UserName != "" {
-		currentName += " @" + user.UserName
+func saveNameWithBot(u *tgbotapi.User) {
+	saveName(u.ID, u.FirstName, u.LastName, u.UserName)
+}
+
+func saveName(userID int, firstName, lastName, username string) {
+	currentName := strings.TrimSpace(firstName + " " + lastName)
+	if username != "" {
+		currentName += " @" + username
 	}
-	db.ZAdd(getUserKey(user.ID), redis.Z{
+	db.ZAdd(getUserKey(userID), redis.Z{
 		Score: float64(time.Now().Unix()),
 		Member: currentName,
 	})
