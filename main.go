@@ -97,21 +97,36 @@ func saveNameWithBot(u *tgbotapi.User) {
 }
 
 func saveName(userID int, firstName, lastName, username string) {
+	latestName, latestTime := getLatestName(userID)
+
 	currentName := strings.TrimSpace(firstName + " " + lastName)
 	if username != "" {
 		currentName += " @" + username
 	}
+
+	if latestName != "" && latestName != currentName {
+		if time.Since(*latestTime) < 5 * time.Minute {
+			db.ZRem(getUserKey(userID), latestName)
+		}
+	}
+
 	db.ZAdd(getUserKey(userID), redis.Z{
 		Score: float64(time.Now().Unix()),
 		Member: currentName,
 	})
 }
 
+func getLatestName(userID int) (string, *time.Time) {
+	records := getNames(userID)
+	if len(records) == 0 {
+		return "", nil
+	}
+	t := time.Unix(int64(records[0].Score), 0)
+	return records[0].Member.(string), &t
+}
+
 func getNamesMessage(userID int) (message string) {
-	records := db.ZRevRangeByScoreWithScores(getUserKey(userID), redis.ZRangeBy{
-		Min: "-inf",
-		Max: "+inf",
-	}).Val()
+	records := getNames(userID)
 	if len(records) == 0 {
 		return "I haven't learned any names of this user :(\nTry adding me to the group where he/she talks frequently."
 	}
@@ -123,6 +138,13 @@ func getNamesMessage(userID int) (message string) {
 		message += fmt.Sprintf("%s: %s\n", lastSeen, record.Member.(string))
 	}
 	return
+}
+
+func getNames(userID int) []redis.Z {
+	return db.ZRevRangeByScoreWithScores(getUserKey(userID), redis.ZRangeBy{
+		Min: "-inf",
+		Max: "+inf",
+	}).Val()
 }
 
 func getUserKey(userID int) string {
