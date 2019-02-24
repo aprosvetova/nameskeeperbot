@@ -106,7 +106,7 @@ func saveName(userID int, firstName, lastName, username string) {
 
 	if latestName != "" && latestName != currentName {
 		lastChanged := getSetLastChanged(userID, time.Now())
-		if lastChanged != nil && time.Since(*lastChanged) < 5 * time.Second {
+		if lastChanged != nil && time.Since(*lastChanged) < 5 * time.Minute {
 			db.ZRem(getUserKey(userID), latestName)
 		}
 	}
