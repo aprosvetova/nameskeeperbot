@@ -16,23 +16,21 @@ var cfg *Config
 func main() {
 	var err error
 
-	cfg, err = loadConfig("config.toml")
+	cfg, err = loadConfig()
 	if err != nil {
-		log.Fatalln("can't read config", err)
+		log.Fatalln("can't read env", err)
 	}
 
 	db = redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Address,
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.Database,
+		Addr: cfg.RedisAddr,
 	})
 
-	bot, err = tgbotapi.NewBotAPI(cfg.General.Token)
+	bot, err = tgbotapi.NewBotAPI(cfg.Token)
 	if err != nil {
 		log.Fatalln("can't access Bot API: ", err)
 	}
 
-	if cfg.TdLib.Enabled {
+	if cfg.TdlibEnabled {
 		go listenTdlib()
 	}
 
@@ -71,11 +69,11 @@ func main() {
 }
 
 func handleStart(msg *tgbotapi.Message) {
-	_, _ = bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Hey there! I'm Names Keeper.\n" +
-		"I can show you one's name history.\n\n" +
-		"There are two ways to ask me for that:\n" +
-		"1. Forward me one's message privately\n" +
-		"2. Reply to one's message with /names command while being in group\n\n" +
+	_, _ = bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Hey there! I'm Names Keeper.\n"+
+		"I can show you one's name history.\n\n"+
+		"There are two ways to ask me for that:\n"+
+		"1. Forward me one's message privately\n"+
+		"2. Reply to one's message with /names command while being in group\n\n"+
 		"Please note that I learn names listening to groups so if I don't know one's history, he/she hasn't been chatting in group where I exist while changing names."))
 }
 
@@ -106,7 +104,7 @@ func saveName(userID int, firstName, lastName, username string) {
 
 	if latestName != "" && latestName != currentName {
 		lastChanged := getSetLastChanged(userID, time.Now())
-		if lastChanged != nil && time.Since(*lastChanged) < 5 * time.Minute {
+		if lastChanged != nil && time.Since(*lastChanged) < 5*time.Minute {
 			db.ZRem(getUserKey(userID), latestName)
 		}
 	}

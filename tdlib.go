@@ -3,18 +3,15 @@ package main
 import (
 	"github.com/zelenin/go-tdlib/client"
 	"log"
-	"path/filepath"
 )
 
 func listenTdlib() {
-	client.SetLogVerbosityLevel(0)
-
-	authorizer := client.BotAuthorizer(cfg.General.Token)
+	authorizer := client.BotAuthorizer(cfg.Token)
 	authorizer.TdlibParameters <- &client.TdlibParameters{
-		DatabaseDirectory:      filepath.Join("tdlib", "database"),
+		DatabaseDirectory:      "/data/database",
 		UseChatInfoDatabase:    true,
-		ApiId:                  int32(cfg.TdLib.ApiID),
-		ApiHash:                cfg.TdLib.ApiHash,
+		ApiId:                  int32(cfg.TdlibApiID),
+		ApiHash:                cfg.TdlibApiHash,
 		SystemLanguageCode:     "en",
 		DeviceModel:            "Ebik",
 		SystemVersion:          "1.0.0",
@@ -22,7 +19,11 @@ func listenTdlib() {
 		EnableStorageOptimizer: true,
 	}
 
-	tdlibClient, err := client.NewClient(authorizer)
+	logVerbosity := client.WithLogVerbosity(&client.SetLogVerbosityLevelRequest{
+		NewVerbosityLevel: 0,
+	})
+
+	tdlibClient, err := client.NewClient(authorizer, logVerbosity)
 	if err != nil {
 		log.Fatalln("tdlib error", err)
 	}

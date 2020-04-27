@@ -15,13 +15,13 @@ func getLatestName(userID int) string {
 }
 
 func getNames(userID int) (n []Name) {
-	records := db.ZRevRangeByScoreWithScores(getUserKey(userID), redis.ZRangeBy{
+	records := db.ZRevRangeByScoreWithScores(getUserKey(userID), &redis.ZRangeBy{
 		Min: "-inf",
 		Max: "+inf",
 	}).Val()
 	for _, r := range records {
 		n = append(n, Name{
-			Name: r.Member.(string),
+			Name:     r.Member.(string),
 			LastSeen: time.Unix(int64(r.Score), 0),
 		})
 	}
@@ -29,8 +29,8 @@ func getNames(userID int) (n []Name) {
 }
 
 func storeName(userID int, name string) {
-	db.ZAdd(getUserKey(userID), redis.Z{
-		Score: float64(time.Now().Unix()),
+	db.ZAdd(getUserKey(userID), &redis.Z{
+		Score:  float64(time.Now().Unix()),
 		Member: name,
 	})
 }
@@ -57,6 +57,6 @@ func getLastChangedKey(userID int) string {
 }
 
 type Name struct {
-	Name string
+	Name     string
 	LastSeen time.Time
 }
