@@ -74,7 +74,7 @@ func handleStart(msg *tgbotapi.Message) {
 		"There are two ways to ask me for that:\n"+
 		"1. Forward me one's message privately\n"+
 		"2. Reply to one's message with /names command while being in group\n\n"+
-		"Please note that I learn names listening to groups so if I don't know one's history, he/she hasn't been chatting in group where I exist while changing names."))
+		"Please note that I learn names listening to groups so if I don't know one's history, they havent't been chatting in group where I exist while changing names."))
 }
 
 func handleUsage(msg *tgbotapi.Message) {
@@ -115,7 +115,7 @@ func saveName(userID int, firstName, lastName, username string) {
 func getNamesMessage(userID int) (message string) {
 	records := getNames(userID)
 	if len(records) == 0 {
-		return "I haven't learned any names of this user :(\nTry adding me to the group where he/she talks frequently."
+		return "I haven't learned any names of this user :(\nTry adding me to the group where they talk frequently."
 	}
 	for i, record := range records {
 		lastSeen := "Last known"
